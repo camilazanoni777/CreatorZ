@@ -1,0 +1,36 @@
+name = "creatorz"
+main = ".open-next/worker.js"
+compatibility_date = "2025-03-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Assets estáticos gerados pelo build
+assets = { directory = ".open-next/assets" }
+
+# ─── Variáveis de ambiente (não-secretas) ───────────────────
+[vars]
+BETTER_AUTH_URL = "https://creatorz.creatorz.workers.dev"
+
+# ─── Banco de dados D1 (SQLite) ─────────────────────────────
+[[d1_databases]]
+binding = "DB"
+database_name = "creatorz"
+database_id = "639c8c9e-e8c1-4e62-9fe0-ef6f0a2bb07b"
+migrations_dir = "migrations"
+
+# ─── KV (cache leve e rate-limiting) ────────────────────────
+[[kv_namespaces]]
+binding = "CACHE"
+id = "11094cc788c14067849b78e9ba631edc"
+
+# ─── R2 (uploads futuros — ativar R2 no dashboard antes) ────
+# [[r2_buckets]]
+# binding = "UPLOADS"
+# bucket_name = "creatorz-uploads"
+
+# ─── Ambiente de produção ────────────────────────────────────
+[env.production]
+name = "creatorz-prod"
+
+[env.production.vars]
+BETTER_AUTH_URL = "https://creatorz.creatorz.workers.dev"
+# BETTER_AUTH_SECRET deve ser definido via: wrangler secret put BETTER_AUTH_SECRET

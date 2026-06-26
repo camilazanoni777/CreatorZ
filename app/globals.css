@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+/* ─── CreatorZ Design Tokens ─── */
+:root {
+  /* Background off-white quente */
+  --background: oklch(98.5% 0.005 80);
+  --foreground: oklch(18% 0.01 260);
+
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(18% 0.01 260);
+
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(18% 0.01 260);
+
+  /* Violeta/lilás tecnológico suave */
+  --primary: oklch(62% 0.18 285);
+  --primary-foreground: oklch(100% 0 0);
+
+  /* Verde sálvia */
+  --secondary: oklch(68% 0.09 155);
+  --secondary-foreground: oklch(25% 0.05 155);
+
+  --muted: oklch(94% 0.005 260);
+  --muted-foreground: oklch(52% 0.02 260);
+
+  /* Rosa claro */
+  --accent: oklch(87% 0.06 345);
+  --accent-foreground: oklch(30% 0.08 345);
+
+  --destructive: oklch(55% 0.22 25);
+  --destructive-foreground: oklch(100% 0 0);
+
+  --border: oklch(91% 0.005 260);
+  --input: oklch(91% 0.005 260);
+  --ring: oklch(62% 0.18 285);
+
+  /* Amarelo suave */
+  --warning: oklch(84% 0.14 88);
+  --warning-foreground: oklch(30% 0.08 88);
+
+  /* Success */
+  --success: oklch(56% 0.13 155);
+  --success-foreground: oklch(100% 0 0);
+
+  --radius: 0.75rem;
+
+  /* Sidebar */
+  --sidebar: oklch(100% 0 0);
+  --sidebar-foreground: oklch(25% 0.01 260);
+  --sidebar-primary: oklch(62% 0.18 285);
+  --sidebar-primary-foreground: oklch(100% 0 0);
+  --sidebar-accent: oklch(96% 0.03 285);
+  --sidebar-accent-foreground: oklch(42% 0.14 285);
+  --sidebar-border: oklch(91% 0.005 260);
+  --sidebar-ring: oklch(62% 0.18 285);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+}
+
+/* ─── Base Styles ─── */
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: var(--ring);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+}
+
+/* ─── Utilities ─── */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 2px;
+  }
+}
