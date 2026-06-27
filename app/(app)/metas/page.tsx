@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Target, Plus, Trophy, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +34,6 @@ const categoryConfig: Record<Goal["category"], { label: string; color: string; e
 };
 
 export default function MetasPage() {
-  const router = useRouter();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -51,13 +49,13 @@ export default function MetasPage() {
   const loadGoals = useCallback(async () => {
     try {
       const res = await fetch("/api/goals");
-      if (res.status === 401) { router.push("/login"); return; }
+      if (!res.ok) return;
       const data = await res.json();
       setGoals(Array.isArray(data) ? data : []);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
@@ -286,3 +284,5 @@ export default function MetasPage() {
     </div>
   );
 }
+
+

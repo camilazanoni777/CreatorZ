@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { BookOpen, CheckSquare2, Coffee, Sunrise, Moon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,7 +33,6 @@ type DailyEntry = {
 };
 
 export default function DailyPage() {
-  const router = useRouter();
   const [morning, setMorning] = useState(DEFAULT_MORNING);
   const [evening, setEvening] = useState(DEFAULT_EVENING);
   const [intencao, setIntencao] = useState("");
@@ -46,7 +44,7 @@ export default function DailyPage() {
 
   const loadDaily = useCallback(async () => {
     const res = await fetch(`/api/daily?date=${today}`);
-    if (res.status === 401) { router.push("/login"); return; }
+    if (!res.ok) return;
     const data: DailyEntry | null = await res.json();
     if (!data) return;
     if (data.morning_checklist) {
@@ -57,7 +55,7 @@ export default function DailyPage() {
     }
     if (data.intention) setIntencao(data.intention);
     if (data.gratitude) setGratidao(data.gratitude);
-  }, [today, router]);
+  }, [today]);
 
   useEffect(() => { loadDaily(); }, [loadDaily]);
 
@@ -180,3 +178,5 @@ export default function DailyPage() {
     </div>
   );
 }
+
+

@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   Wallet,
   TrendingUp,
@@ -10,18 +10,6 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
 } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,27 +34,51 @@ import type { Transaction } from "@/types";
 
 const CATEGORY_COLORS: Record<string, string> = {
   moradia: "#7c3aed",
-  alimentação: "#10b981",
-  saúde: "#ec4899",
+  alimentacao: "#10b981",
+  saude: "#ec4899",
   lazer: "#f59e0b",
   transporte: "#3b82f6",
   renda: "#10b981",
   outros: "#94a3b8",
 };
 
-const EXPENSE_CATEGORIES = ["alimentação", "moradia", "saúde", "lazer", "transporte", "outros"];
+const EXPENSE_CATEGORIES = ["alimentacao", "moradia", "saude", "lazer", "transporte", "outros"];
+const CATEGORY_LABELS: Record<string, string> = {
+  alimentacao: "Alimentação",
+  moradia: "Moradia",
+  saude: "Saúde",
+  lazer: "Lazer",
+  transporte: "Transporte",
+  renda: "Renda",
+  outros: "Outros",
+};
 
 const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+const chartLoader = (
+  <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
+    Carregando gráfico...
+  </div>
+);
+
+const FinanceEvolutionChart = dynamic(
+  () => import("./components/finance-charts").then((mod) => mod.FinanceEvolutionChart),
+  { ssr: false, loading: () => chartLoader },
+);
+
+const FinanceCategoriesChart = dynamic(
+  () => import("./components/finance-charts").then((mod) => mod.FinanceCategoriesChart),
+  { ssr: false, loading: () => chartLoader },
+);
+
 export default function FinancasPage() {
-  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newAmount, setNewAmount] = useState("");
   const [newType, setNewType] = useState<"income" | "expense">("expense");
-  const [newCategory, setNewCategory] = useState("alimentação");
+  const [newCategory, setNewCategory] = useState("alimentacao");
   const [saving, setSaving] = useState(false);
 
   const month = new Date().toISOString().slice(0, 7);
@@ -74,13 +86,13 @@ export default function FinancasPage() {
   const loadTransactions = useCallback(async () => {
     try {
       const res = await fetch(`/api/transactions?month=${month}`);
-      if (res.status === 401) { router.push("/login"); return; }
+      if (!res.ok) return;
       const data = await res.json();
       setTransactions(Array.isArray(data) ? data : []);
     } finally {
       setLoading(false);
     }
-  }, [month, router]);
+  }, [month]);
 
   useEffect(() => { loadTransactions(); }, [loadTransactions]);
 
@@ -202,7 +214,7 @@ export default function FinancasPage() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {EXPENSE_CATEGORIES.map((c) => (
-                        <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
+                        <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -270,7 +282,7 @@ export default function FinancasPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{t.title}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{t.category}</p>
+                  <p className="text-xs text-muted-foreground">{CATEGORY_LABELS[t.category] ?? t.category}</p>
                 </div>
                 <div className="text-right">
                   <p className={`text-sm font-semibold ${t.type === "income" ? "text-success" : "text-destructive"}`}>
@@ -291,29 +303,7 @@ export default function FinancasPage() {
               <CardTitle className="text-base">Receitas vs Despesas (últimos 3 meses)</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={areaData} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="receitaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="despesaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
-                  <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
-                  <Tooltip
-                    formatter={(v) => formatCurrency(Number(v))}
-                    contentStyle={{ borderRadius: "12px", border: "1px solid var(--border)", fontSize: "12px" }}
-                  />
-                  <Area type="monotone" dataKey="receita" stroke="#10b981" fill="url(#receitaGrad)" strokeWidth={2} name="Receita" />
-                  <Area type="monotone" dataKey="despesa" stroke="#ef4444" fill="url(#despesaGrad)" strokeWidth={2} name="Despesa" />
-                </AreaChart>
-              </ResponsiveContainer>
+              <FinanceEvolutionChart data={areaData} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -327,27 +317,7 @@ export default function FinancasPage() {
               {pieData.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhuma despesa registrada.</p>
               ) : (
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <ResponsiveContainer width={180} height={180}>
-                    <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-                        {pieData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
-                      </Pie>
-                      <Tooltip formatter={(v) => formatCurrency(Number(v))} contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex-1 space-y-2 w-full">
-                    {pieData.map((item) => (
-                      <div key={item.name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                          <span className="text-sm capitalize">{item.name}</span>
-                        </div>
-                        <span className="text-sm font-medium">{formatCurrency(item.value)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <FinanceCategoriesChart data={pieData} />
               )}
             </CardContent>
           </Card>
@@ -356,3 +326,6 @@ export default function FinancasPage() {
     </div>
   );
 }
+
+
+

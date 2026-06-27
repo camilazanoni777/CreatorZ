@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { PenLine, Plus, ChevronRight, Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,6 @@ function formatDateLabel(dateStr: string): string {
 }
 
 export default function DiarioPage() {
-  const router = useRouter();
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isWriting, setIsWriting] = useState(false);
@@ -47,13 +45,13 @@ export default function DiarioPage() {
   const loadEntries = useCallback(async () => {
     try {
       const res = await fetch(`/api/diary?month=${month}`);
-      if (res.status === 401) { router.push("/login"); return; }
+      if (!res.ok) return;
       const data = await res.json();
       setEntries(Array.isArray(data) ? data : []);
     } finally {
       setLoading(false);
     }
-  }, [month, router]);
+  }, [month]);
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
 
@@ -202,3 +200,5 @@ export default function DiarioPage() {
     </div>
   );
 }
+
+

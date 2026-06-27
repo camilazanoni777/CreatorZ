@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, Circle, CheckCircle2, Clock, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,7 +107,6 @@ function TaskItem({
 }
 
 export default function TarefasPage() {
-  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -119,13 +117,13 @@ export default function TarefasPage() {
   const loadTasks = useCallback(async () => {
     try {
       const res = await fetch("/api/tasks");
-      if (res.status === 401) { router.push("/login"); return; }
+      if (!res.ok) return;
       const data = await res.json();
       setTasks(Array.isArray(data) ? data : []);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
 
@@ -272,3 +270,5 @@ export default function TarefasPage() {
     </div>
   );
 }
+
+

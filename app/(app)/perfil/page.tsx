@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import {
   User,
   Bell,
   Shield,
   ChevronRight,
-  LogOut,
   Crown,
   Pencil,
 } from "lucide-react";
@@ -17,8 +15,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { signOut } from "@/lib/auth-client";
 
 type Profile = {
   id: string;
@@ -38,9 +34,7 @@ function formatJoinDate(createdAt: string | number): string {
 }
 
 export default function PerfilPage() {
-  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loggingOut, setLoggingOut] = useState(false);
   const [notifications, setNotifications] = useState({
     habitos: true,
     checkIn: true,
@@ -50,23 +44,9 @@ export default function PerfilPage() {
 
   useEffect(() => {
     fetch("/api/profile")
-      .then((r) => {
-        if (r.status === 401) { router.push("/login"); return null; }
-        return r.json();
-      })
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => { if (data) setProfile(data as Profile); });
-  }, [router]);
-
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try {
-      await signOut();
-      router.push("/login");
-      router.refresh();
-    } finally {
-      setLoggingOut(false);
-    }
-  };
+  }, []);
 
   if (!profile) {
     return (
@@ -193,18 +173,6 @@ export default function PerfilPage() {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           ))}
-          <Separator />
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="flex items-center justify-between w-full px-6 py-3.5 hover:bg-destructive/5 transition-colors text-sm text-destructive disabled:opacity-60"
-          >
-            <div className="flex items-center gap-2.5">
-              <LogOut className="h-4 w-4" />
-              {loggingOut ? "Saindo..." : "Sair"}
-            </div>
-            <ChevronRight className="h-4 w-4" />
-          </button>
         </CardContent>
       </Card>
 

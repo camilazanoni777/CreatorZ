@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Flame, Plus, CheckCircle2, Circle, Trophy } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,7 +57,6 @@ function computeStreak(habitId: string, logs: ApiLog[]): number {
 }
 
 export default function HabitosPage() {
-  const router = useRouter();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState("");
@@ -87,13 +85,13 @@ export default function HabitosPage() {
   const loadData = useCallback(async () => {
     try {
       const res = await fetch(`/api/habits?month=${month}`);
-      if (res.status === 401) { router.push("/login"); return; }
+      if (!res.ok) return;
       const { habits: raw, logs } = await res.json();
       setHabits(buildHabits(raw, logs));
     } finally {
       setLoading(false);
     }
-  }, [month, router, buildHabits]);
+  }, [month, buildHabits]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -288,3 +286,5 @@ export default function HabitosPage() {
     </div>
   );
 }
+
+

@@ -1,11 +1,8 @@
-/**
- * Helper de sessão para uso em Route Handlers e Server Components.
- * Valida a sessão usando Better Auth e retorna o usuário autenticado.
- * NUNCA usar em código client-side.
- */
 import { headers } from "next/headers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createAuth } from "@/lib/auth";
+
+const VISITOR_USER_ID = "visitor";
 
 export type SessionUser = {
   id: string;
@@ -28,10 +25,6 @@ export type Session = {
   };
 };
 
-/**
- * Retorna a sessão do usuário atual ou null se não autenticado.
- * Lança erro se chamado fora do contexto Cloudflare (local dev via `next dev`).
- */
 export async function getSession(): Promise<Session | null> {
   try {
     const { env } = await getCloudflareContext({ async: true });
@@ -44,14 +37,43 @@ export async function getSession(): Promise<Session | null> {
   }
 }
 
-/**
- * Retorna a sessão ou lança 401 se não autenticado.
- * Usar em Route Handlers que exigem autenticação.
- */
+async function getVisitorSession(): Promise<Session> {
+  const { env } = await getCloudflareContext({ async: true });
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30);
+
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO "user" (id, name, email, emailVerified, image, createdAt, updatedAt)
+       VALUES (?, ?, ?, 1, NULL, unixepoch(), unixepoch())`,
+    ).bind(VISITOR_USER_ID, "Visitante", "visitante@creatorz.local"),
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO profiles (id, plan, timezone, created_at, updated_at)
+       VALUES (?, 'free', 'America/Sao_Paulo', unixepoch(), unixepoch())`,
+    ).bind(VISITOR_USER_ID),
+  ]);
+
+  return {
+    user: {
+      id: VISITOR_USER_ID,
+      name: "Visitante",
+      email: "visitante@creatorz.local",
+      emailVerified: true,
+      image: null,
+      plan: "free",
+      createdAt: now,
+      updatedAt: now,
+    },
+    session: {
+      id: "visitor-session",
+      token: "visitor-session",
+      expiresAt,
+      userId: VISITOR_USER_ID,
+    },
+  };
+}
+
 export async function requireSession(): Promise<Session> {
   const session = await getSession();
-  if (!session) {
-    throw new Response("Não autorizado", { status: 401 });
-  }
-  return session;
+  return session ?? getVisitorSession();
 }

@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { CalendarDays, Plus, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ function getDaysInMonth(year: number, month: number) { return new Date(year, mon
 function getFirstDayOfMonth(year: number, month: number) { return new Date(year, month, 1).getDay(); }
 
 export default function AgendaPage() {
-  const router = useRouter();
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
 
@@ -56,13 +54,13 @@ export default function AgendaPage() {
   const loadEvents = useCallback(async () => {
     try {
       const res = await fetch(`/api/events?month=${month}`);
-      if (res.status === 401) { router.push("/login"); return; }
+      if (!res.ok) return;
       const data = await res.json();
       setEvents(Array.isArray(data) ? data : []);
     } finally {
       setLoading(false);
     }
-  }, [month, router]);
+  }, [month]);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
@@ -266,3 +264,5 @@ export default function AgendaPage() {
     </div>
   );
 }
+
+

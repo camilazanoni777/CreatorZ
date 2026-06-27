@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ElementType } from "react";
 import {
@@ -18,30 +18,42 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { CheckIn, Habit, HabitLog, MoodLevel, Task, Transaction } from "@/types";
 
-type HabitWithStatus = Habit & { completed: boolean; streak: number };
+type DashboardData = {
+  tasks: {
+    doneCount: number;
+    openCount: number;
+    priorityTasks: Array<{
+      id: string;
+      title: string;
+      priority: "low" | "medium" | "high";
+    }>;
+  };
+  finances: {
+    income: number;
+    expenses: number;
+    balance: number;
+  };
+  wellbeing: {
+    label: string;
+  } | null;
+  habits: {
+    completed: number;
+    total: number;
+    percent: number;
+    bestStreak: number;
+  };
+  creator: {
+    value: number;
+    inProduction: number;
+    activePublis: number;
+  };
+};
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
-
-const moodLabels: Record<MoodLevel, string> = {
-  1: "Precisa de cuidado",
-  2: "Mais sensivel",
-  3: "Estavel",
-  4: "Leve",
-  5: "Muito bem",
-};
-
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function currentMonthKey() {
-  return todayKey().slice(0, 7);
-}
 
 function StatCard({
   label,
@@ -144,58 +156,22 @@ function MetricRow({
 }
 
 export function DashboardOverview() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
-  const [habits, setHabits] = useState<HabitWithStatus[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const today = useMemo(() => todayKey(), []);
-  const month = useMemo(() => currentMonthKey(), []);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
       setLoading(true);
-      const [taskRes, transactionRes, checkInRes, habitRes] = await Promise.all([
-        fetch("/api/tasks"),
-        fetch(`/api/transactions?month=${month}`),
-        fetch(`/api/check-ins?month=${month}`),
-        fetch(`/api/habits?month=${month}`),
-      ]);
+      const response = await fetch("/api/dashboard");
 
       if (!active) return;
 
-      const nextTasks = taskRes.ok ? ((await taskRes.json()) as Task[]) : [];
-      const nextTransactions = transactionRes.ok ? ((await transactionRes.json()) as Transaction[]) : [];
-      const nextCheckIns = checkInRes.ok ? ((await checkInRes.json()) as CheckIn[]) : [];
-      const habitData = habitRes.ok
-        ? ((await habitRes.json()) as { habits: Habit[]; logs: HabitLog[] })
-        : { habits: [], logs: [] };
+      if (response.ok) {
+        setData((await response.json()) as DashboardData);
+      }
 
-      const nextHabits = habitData.habits.map((habit) => {
-        const logDates = new Set(
-          habitData.logs
-            .filter((log) => log.habit_id === habit.id && log.completed !== false)
-            .map((log) => log.date),
-        );
-
-        let streak = 0;
-        for (let i = 0; i < 90; i++) {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          if (logDates.has(date.toISOString().slice(0, 10))) streak += 1;
-          else if (i > 0) break;
-        }
-
-        return { ...habit, completed: logDates.has(today), streak };
-      });
-
-      setTasks(Array.isArray(nextTasks) ? nextTasks : []);
-      setTransactions(Array.isArray(nextTransactions) ? nextTransactions : []);
-      setCheckIns(Array.isArray(nextCheckIns) ? nextCheckIns : []);
-      setHabits(nextHabits);
       setLoading(false);
     }
 
@@ -206,30 +182,11 @@ export function DashboardOverview() {
     return () => {
       active = false;
     };
-  }, [month, today]);
+  }, []);
 
-  const openTasks = tasks.filter((task) => task.status !== "done");
-  const doneTasks = tasks.filter((task) => task.status === "done");
-  const priorityTasks = [...openTasks]
-    .sort((a, b) => {
-      const weight = { high: 0, medium: 1, low: 2 };
-      return weight[a.priority] - weight[b.priority];
-    })
-    .slice(0, 3);
+  const priorityTasks = data?.tasks.priorityTasks ?? [];
 
-  const todayCheckIn = checkIns.find((entry) => entry.date === today);
-  const income = transactions
-    .filter((item) => item.type === "income")
-    .reduce((sum, item) => sum + Number(item.amount), 0);
-  const expenses = transactions
-    .filter((item) => item.type === "expense")
-    .reduce((sum, item) => sum + Number(item.amount), 0);
-  const balance = income - expenses;
-  const completedHabits = habits.filter((habit) => habit.completed).length;
-  const bestStreak = habits.reduce((max, habit) => Math.max(max, habit.streak), 0);
-  const habitPercent = habits.length > 0 ? Math.round((completedHabits / habits.length) * 100) : 0;
-
-  if (loading) {
+  if (loading || !data) {
     return (
       <div className="flex min-h-[420px] items-center justify-center text-muted-foreground">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -242,28 +199,28 @@ export function DashboardOverview() {
     <div className="mx-auto w-full max-w-[1540px] space-y-9">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Saldo do mes"
-          value={money.format(balance)}
-          description={balance >= 0 ? "Mes financeiramente equilibrado." : "Ajuste as saidas para fechar melhor."}
+          label="Saldo do mês"
+          value={money.format(data.finances.balance)}
+          description={data.finances.balance >= 0 ? "Mês financeiramente equilibrado." : "Ajuste as saídas para fechar melhor."}
           icon={Banknote}
           tone="sage"
         />
         <StatCard
           label="Foco da semana"
-          value={`${doneTasks.length} entregas`}
-          description={`${openTasks.length} prioridades abertas`}
+          value={`${data.tasks.doneCount} entregas`}
+          description={`${data.tasks.openCount} prioridades abertas`}
           icon={Sparkles}
         />
         <StatCard
           label="Bem-estar"
-          value={todayCheckIn ? moodLabels[todayCheckIn.mood] : "Sem check-in"}
-          description={todayCheckIn ? "Seu estado do dia ja foi registrado." : "Seu check-in de hoje ainda nao foi feito."}
+          value={data.wellbeing ? data.wellbeing.label : "Sem check-in"}
+          description={data.wellbeing ? "Seu estado do dia já foi registrado." : "Seu check-in de hoje ainda não foi feito."}
           icon={HeartPulse}
         />
         <StatCard
           label="Creator"
-          value={money.format(0)}
-          description="0 em producao - 0 publis ativas"
+          value={money.format(data.creator.value)}
+          description={`${data.creator.inProduction} em producao - ${data.creator.activePublis} publis ativas`}
           icon={Clapperboard}
         />
       </section>
@@ -304,7 +261,7 @@ export function DashboardOverview() {
             ) : (
               <div className="mt-5">
                 <p className="text-sm font-semibold text-foreground">
-                  Voce ainda nao criou prioridades para hoje.
+                  Você ainda não criou prioridades para hoje.
                 </p>
                 <p className="mt-3 max-w-md text-sm leading-7 text-muted-foreground">
                   Comece pelo proximo passo mais importante e o restante do painel se organiza ao redor dele.
@@ -321,12 +278,12 @@ export function DashboardOverview() {
         </div>
 
         <div className="min-h-[394px] rounded-[24px] border border-emerald-100 bg-emerald-50/45 p-5 shadow-[0_20px_55px_rgba(29,78,64,0.07)]">
-          <PanelHeader eyebrow="Resumo do mes" title="Financeiro" icon={Inbox} tone="sage" />
+          <PanelHeader eyebrow="Resumo do mês" title="Financeiro" icon={Inbox} tone="sage" />
           <div className="mt-5 space-y-3">
-            <MetricRow label="Saldo" helper="resultado atual" value={money.format(balance)} />
-            <MetricRow label="Renda" helper="entradas registradas" value={money.format(income)} />
-            <MetricRow label="Saidas" helper="fixas + variaveis" value={money.format(expenses)} />
-            <MetricRow label="Pendencias" helper="contas aguardando" value="0" />
+            <MetricRow label="Saldo" helper="resultado atual" value={money.format(data.finances.balance)} />
+            <MetricRow label="Renda" helper="entradas registradas" value={money.format(data.finances.income)} />
+            <MetricRow label="Saidas" helper="fixas + variaveis" value={money.format(data.finances.expenses)} />
+            <MetricRow label="Pendências" helper="contas aguardando" value="0" />
           </div>
         </div>
 
@@ -337,9 +294,9 @@ export function DashboardOverview() {
               <HeartPulse className="h-5 w-5" />
             </span>
             <p className="mt-5 text-sm font-semibold text-foreground">
-              {todayCheckIn
-                ? `Hoje voce esta: ${moodLabels[todayCheckIn.mood].toLowerCase()}.`
-                : "Seu check-in ainda nao foi registrado."}
+              {data.wellbeing
+                ? `Hoje você está: ${data.wellbeing.label.toLowerCase()}.`
+                : "Seu check-in ainda não foi registrado."}
             </p>
             <p className="mt-3 text-sm leading-7 text-muted-foreground">
               Esse espaco foi mantido mais leve, mas continua acolhedor e util quando estiver vazio.
@@ -357,8 +314,8 @@ export function DashboardOverview() {
                 <Waves className="h-4 w-4 text-foreground" />
               </span>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Habitos</p>
-                <p className="text-sm font-semibold text-rose-900">{habitPercent}%</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Hábitos</p>
+                <p className="text-sm font-semibold text-rose-900">{data.habits.percent}%</p>
               </div>
             </div>
             <div className="flex min-h-[62px] items-center gap-3 rounded-[18px] border border-rose-100 bg-rose-50/35 px-4">
@@ -367,14 +324,14 @@ export function DashboardOverview() {
               </span>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Streak</p>
-                <p className="text-sm font-semibold text-rose-900">{bestStreak} dias</p>
+                <p className="text-sm font-semibold text-rose-900">{data.habits.bestStreak} dias</p>
               </div>
             </div>
           </div>
-          {habits.length > 0 && (
+          {data.habits.total > 0 && (
             <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-emerald-700" />
-              {completedHabits} de {habits.length} habitos concluidos hoje
+              {data.habits.completed} de {data.habits.total} hábitos concluídos hoje
             </div>
           )}
         </div>
@@ -382,3 +339,5 @@ export function DashboardOverview() {
     </div>
   );
 }
+
+
