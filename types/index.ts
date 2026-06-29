@@ -64,17 +64,46 @@ export interface DiaryEntry {
   updated_at: string;
 }
 
+export type GoalCategory =
+  | "pessoal"
+  | "profissional"
+  | "saude"
+  | "financeiro"
+  | "estudo"
+  | "autocuidado"
+  | "relacionamentos"
+  | "casa"
+  | "viagens"
+  | "espiritualidade"
+  | "sonhos";
+
+export type GoalPriority = "essencial" | "importante" | "desejo";
+export type GoalType = "simples" | "financeira" | "etapas";
+export type GoalStatus = "active" | "completed" | "paused";
+
+export interface GoalStep {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface Goal {
   id: string;
   user_id: string;
   title: string;
   description?: string;
-  category: "pessoal" | "profissional" | "saude" | "financeiro" | "estudo";
-  status: "active" | "completed" | "paused";
+  emoji?: string;
+  category: GoalCategory;
+  status: GoalStatus;
+  priority?: GoalPriority;
+  goal_type?: GoalType;
+  motivation?: string;
   progress: number;
   target: number;
   unit?: string;
   deadline?: string;
+  steps?: GoalStep[];
+  completed_at?: string;
   created_at: string;
   updated_at: string;
 }
