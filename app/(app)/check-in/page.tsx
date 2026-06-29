@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Heart, Zap, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ const prompts = [
 ];
 
 export default function CheckInPage() {
-  const router = useRouter();
   const [mood, setMood] = useState<MoodLevel | null>(null);
   const [energy, setEnergy] = useState<MoodLevel | null>(null);
   const [note, setNote] = useState("");
@@ -49,7 +47,7 @@ export default function CheckInPage() {
     const month = today.slice(0, 7);
     fetch(`/api/check-ins?month=${month}`)
       .then((r) => {
-        if (r.status === 401) { router.push("/login"); return null; }
+        if (!r.ok) return null;
         return r.json();
       })
       .then((data: Array<{ date: string; mood: MoodLevel; energy: MoodLevel; note?: string }> | null) => {
@@ -61,7 +59,7 @@ export default function CheckInPage() {
           setNote(todayEntry.note ?? "");
         }
       });
-  }, [today, router]);
+  }, [today]);
 
   const canSave = mood !== null && energy !== null;
 
@@ -184,3 +182,5 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+

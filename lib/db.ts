@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Helper para acessar o binding D1 do Cloudflare.
  * Só pode ser chamado dentro de Route Handlers, Server Actions ou Server Components.
  * NUNCA importar em componentes client-side.

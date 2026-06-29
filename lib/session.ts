@@ -1,11 +1,7 @@
-/**
- * Helper de sessão para uso em Route Handlers e Server Components.
- * Valida a sessão usando Better Auth e retorna o usuário autenticado.
- * NUNCA usar em código client-side.
- */
 import { headers } from "next/headers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createAuth } from "@/lib/auth";
+import { unauthorized } from "@/lib/api";
 
 export type SessionUser = {
   id: string;
@@ -13,6 +9,7 @@ export type SessionUser = {
   email: string;
   emailVerified: boolean;
   image?: string | null;
+  status?: string;
   plan?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -28,30 +25,38 @@ export type Session = {
   };
 };
 
-/**
- * Retorna a sessão do usuário atual ou null se não autenticado.
- * Lança erro se chamado fora do contexto Cloudflare (local dev via `next dev`).
- */
 export async function getSession(): Promise<Session | null> {
   try {
     const { env } = await getCloudflareContext({ async: true });
     const auth = createAuth(env.DB);
     const headersList = await headers();
     const session = await auth.api.getSession({ headers: headersList });
-    return session as Session | null;
+    if (!session?.user?.id) return null;
+
+    const user = await env.DB.prepare(
+      `SELECT status, deleted_at
+       FROM "user"
+       WHERE id = ?`,
+    ).bind(session.user.id).first<{ status?: string | null; deleted_at?: number | null }>();
+
+    if (user?.deleted_at || user?.status === "deleted" || user?.status === "suspended") {
+      return null;
+    }
+
+    return {
+      ...(session as Session),
+      user: {
+        ...(session.user as SessionUser),
+        status: user?.status ?? "active",
+      },
+    };
   } catch {
     return null;
   }
 }
 
-/**
- * Retorna a sessão ou lança 401 se não autenticado.
- * Usar em Route Handlers que exigem autenticação.
- */
 export async function requireSession(): Promise<Session> {
   const session = await getSession();
-  if (!session) {
-    throw new Response("Não autorizado", { status: 401 });
-  }
+  if (!session) throw unauthorized();
   return session;
 }
