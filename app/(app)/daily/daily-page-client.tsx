@@ -660,9 +660,13 @@ function ExtraTasksSection({
 
 function FinanceSection({
   logs,
+  dailyId,
+  date,
   update,
 }: {
   logs: FinanceLog[];
+  dailyId?: string;
+  date: string;
   update: (value: FinanceLog[]) => void;
 }) {
   const [mode, setMode] = useState<"idle" | "expense" | "income">("idle");
@@ -670,19 +674,35 @@ function FinanceSection({
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
 
-  function save() {
+  async function save() {
     const parsedAmount = Number(amount.replace(",", "."));
     if (!parsedAmount || parsedAmount < 0) return;
+    const nextLog = {
+      id: uid("finance"),
+      type: mode === "income" ? "income" : "expense",
+      amount: parsedAmount,
+      category: category || (mode === "income" ? "Recebimento" : "Gasto"),
+      description,
+    } satisfies FinanceLog;
     update([
       ...logs,
-      {
-        id: uid("finance"),
-        type: mode === "income" ? "income" : "expense",
-        amount: parsedAmount,
-        category: category || (mode === "income" ? "Recebimento" : "Gasto"),
-        description,
-      },
+      nextLog,
     ]);
+    await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: nextLog.description || nextLog.category,
+        amount_cents: Math.round(nextLog.amount * 100),
+        transaction_type: nextLog.type,
+        category_name: nextLog.category,
+        transaction_date: date,
+        status: "paid",
+        source: "daily",
+        daily_entry_id: dailyId,
+        description: nextLog.description,
+      }),
+    }).catch(() => undefined);
     setAmount("");
     setCategory("");
     setDescription("");
@@ -939,7 +959,6 @@ export function DailyPageClient() {
   const date = todayISO();
   const [daily, setDaily] = useState<DailyEntry>(() => createDefaultDaily(date));
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [reorganizeOpen, setReorganizeOpen] = useState(false);
   const [weekOpen, setWeekOpen] = useState(false);
@@ -970,14 +989,14 @@ export function DailyPageClient() {
       try {
         setLoading(true);
         const response = await fetch(`/api/daily?date=${date}`);
-        if (!response.ok) throw new Error("Não foi possível carregar sua Daily.");
+        if (!response.ok) return;
         const data = (await response.json()) as DailyEntry;
         if (!cancelled) {
           setDaily(data);
           loadedRef.current = true;
         }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Erro ao carregar a Daily.");
+      } catch {
+        // Keep the default local Daily visible when the API is unavailable.
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -999,9 +1018,8 @@ export function DailyPageClient() {
           body: JSON.stringify(daily),
         });
         if (!response.ok) throw new Error("Não foi possível salvar agora.");
-        setError("");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro ao salvar a Daily.");
+      } catch {
+        // Saving failures should not interrupt the planning flow.
       } finally {
         setSaving(false);
       }
@@ -1027,12 +1045,6 @@ export function DailyPageClient() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-24">
-      {error ? (
-        <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      ) : null}
-
       <DailyHeader
         date={daily.date}
         completed={progress.completed}
@@ -1075,7 +1087,7 @@ export function DailyPageClient() {
           updatePriorities={(value) => update({ priorities: value })}
         />
         <div className="space-y-6">
-          <FinanceSection logs={daily.finance_logs} update={(value) => update({ finance_logs: value })} />
+          <FinanceSection logs={daily.finance_logs} dailyId={daily.id} date={daily.date} update={(value) => update({ finance_logs: value })} />
           <PauseSection actions={daily.pause_actions} worry={daily.worry_note} update={update} />
         </div>
       </div>

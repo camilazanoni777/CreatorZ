@@ -104,10 +104,10 @@ export async function GET() {
       ),
       queryOne<MoneySummary>(
         `SELECT
-          COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS income,
-          COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expenses
+          COALESCE(SUM(CASE WHEN COALESCE(transaction_type, type) = 'income' THEN COALESCE(NULLIF(amount_cents, 0), CAST(ROUND(amount * 100) AS INTEGER)) ELSE 0 END), 0) AS income,
+          COALESCE(SUM(CASE WHEN COALESCE(transaction_type, type) = 'expense' THEN COALESCE(NULLIF(amount_cents, 0), CAST(ROUND(amount * 100) AS INTEGER)) ELSE 0 END), 0) AS expenses
         FROM transactions
-        WHERE user_id = ? AND date LIKE ?`,
+        WHERE user_id = ? AND COALESCE(transaction_date, date) LIKE ? AND deleted_at IS NULL`,
         userId,
         `${month}%`,
       ),
@@ -142,8 +142,8 @@ export async function GET() {
     const totalHabits = Number(habitCount?.count ?? 0);
     const doneHabits = Number(completedHabits?.count ?? 0);
     const bestStreak = Math.max(0, ...Array.from(logsByHabit.values()).map(streakFor));
-    const income = Number(moneySummary?.income ?? 0);
-    const expenses = Number(moneySummary?.expenses ?? 0);
+    const income = Number(moneySummary?.income ?? 0) / 100;
+    const expenses = Number(moneySummary?.expenses ?? 0) / 100;
 
     return json({
       tasks: {

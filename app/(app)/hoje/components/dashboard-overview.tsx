@@ -50,6 +50,31 @@ type DashboardData = {
   };
 };
 
+const emptyDashboardData: DashboardData = {
+  tasks: {
+    doneCount: 0,
+    openCount: 0,
+    priorityTasks: [],
+  },
+  finances: {
+    income: 0,
+    expenses: 0,
+    balance: 0,
+  },
+  wellbeing: null,
+  habits: {
+    completed: 0,
+    total: 0,
+    percent: 0,
+    bestStreak: 0,
+  },
+  creator: {
+    value: 0,
+    inProduction: 0,
+    activePublis: 0,
+  },
+};
+
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
@@ -156,47 +181,72 @@ function MetricRow({
 }
 
 export function DashboardOverview() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DashboardData>(emptyDashboardData);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
 
     async function load() {
       setLoading(true);
-      const response = await fetch("/api/dashboard");
+      setMessage("");
+      const timeout = window.setTimeout(() => controller.abort(), 8000);
 
-      if (!active) return;
+      try {
+        const response = await fetch("/api/dashboard", {
+          signal: controller.signal,
+        });
 
-      if (response.ok) {
-        setData((await response.json()) as DashboardData);
+        if (!active) return;
+
+        if (response.ok) {
+          setData((await response.json()) as DashboardData);
+          return;
+        }
+
+        setData(emptyDashboardData);
+        setMessage(
+          response.status === 401
+            ? "Entre na sua conta para carregar seus dados salvos."
+            : "Nao foi possivel atualizar o panorama agora.",
+        );
+      } catch {
+        if (active) {
+          setData(emptyDashboardData);
+          setMessage("Nao foi possivel atualizar o panorama agora.");
+        }
+      } finally {
+        window.clearTimeout(timeout);
+        if (active) setLoading(false);
       }
-
-      setLoading(false);
     }
 
-    load().catch(() => {
-      if (active) setLoading(false);
-    });
+    load();
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, []);
 
   const priorityTasks = data?.tasks.priorityTasks ?? [];
 
-  if (loading || !data) {
-    return (
-      <div className="flex min-h-[420px] items-center justify-center text-muted-foreground">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        Carregando panorama
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto w-full max-w-[1540px] space-y-9">
+      {(loading || message) && (
+        <div className="flex min-h-12 items-center gap-3 rounded-[18px] border border-rose-100 bg-white/74 px-4 py-3 text-sm text-muted-foreground shadow-sm">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin text-rose-800" /> : <Inbox className="h-4 w-4 text-rose-800" />}
+          <span>{loading ? "Atualizando panorama..." : message}</span>
+          {message.includes("Entre") && (
+            <Button className="ml-auto rounded-full" size="sm" asChild>
+              <Link href="/login">Entrar</Link>
+            </Button>
+          )}
+        </div>
+      )}
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Saldo do mês"
