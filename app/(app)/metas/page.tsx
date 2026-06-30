@@ -119,21 +119,33 @@ export default function MetasPage() {
 
   // ── API actions ──────────────────────────────────────────────
   async function createOrUpdateGoal(data: Partial<Goal>) {
-    if (editingGoal) {
-      await fetch(`/api/goals?id=${editingGoal.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+    // editingGoal sem id = prefill de sugestão rápida → é criação, não edição
+    const isEdit = !!(editingGoal?.id);
+    const url    = isEdit ? `/api/goals?id=${editingGoal!.id}` : "/api/goals";
+    const method = isEdit ? "PATCH" : "POST";
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(
+        body.error ?? `Não foi possível ${isEdit ? "salvar" : "criar"} a meta. Tente novamente.`,
+      );
+    }
+
+    if (!isEdit) {
+      // POST retorna a meta criada — adiciona à lista sem recarregar tudo
+      const saved = await res.json() as Goal;
+      setGoals((prev) => [saved, ...prev]);
     } else {
-      await fetch("/api/goals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      // PATCH: recarrega para refletir todas as mudanças
+      await loadGoals();
     }
     setEditingGoal(null);
-    await loadGoals();
   }
 
   async function handleComplete(goal: Goal) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useId } from "react";
+import { useState, useId, useEffect } from "react";
 import { Plus, Minus, DollarSign, CheckSquare, Zap } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -85,6 +85,10 @@ export function GoalModal({ open, onClose, onSave, initial }: GoalModalProps) {
   const [steps, setSteps]           = useState<GoalStep[]>(initial?.steps ?? [{ id: generateStepId(), title: "", completed: false }]);
   const [saving, setSaving]         = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
+  const [saveError, setSaveError]   = useState<string | null>(null);
+
+  // Limpa erro ao reabrir o modal
+  useEffect(() => { if (open) setSaveError(null); }, [open]);
 
   const canSave = title.trim() && (
     goalType === "etapas"
@@ -95,6 +99,7 @@ export function GoalModal({ open, onClose, onSave, initial }: GoalModalProps) {
   async function handleSave() {
     if (!canSave || saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const validSteps = steps.filter((s) => s.title.trim());
       const numTarget = goalType === "etapas"
@@ -115,7 +120,14 @@ export function GoalModal({ open, onClose, onSave, initial }: GoalModalProps) {
         steps: goalType === "etapas" ? validSteps : [],
         progress: initial?.progress ?? 0,
       });
+      // Só fecha o modal se o save teve sucesso
       onClose();
+    } catch (err) {
+      setSaveError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar a meta. Tente novamente.",
+      );
     } finally {
       setSaving(false);
     }
@@ -423,17 +435,24 @@ export function GoalModal({ open, onClose, onSave, initial }: GoalModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 pb-6 pt-0 flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            className="flex-1"
-            onClick={handleSave}
-            disabled={!canSave || saving}
-          >
-            {saving ? "Salvando…" : isEdit ? "Salvar alterações" : "Criar minha meta"}
-          </Button>
+        <div className="px-6 pb-6 pt-0 space-y-3">
+          {saveError && (
+            <div className="rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+              {saveError}
+            </div>
+          )}
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleSave}
+              disabled={!canSave || saving}
+            >
+              {saving ? "Salvando…" : isEdit ? "Salvar alterações" : "Criar minha meta"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
