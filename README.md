@@ -1,36 +1,174 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CreatorZ
 
-## Getting Started
+SaaS de organização de vida para criadores de conteúdo. Reúne tarefas, hábitos, metas, finanças, diário e agenda em um único lugar, rodando 100% na edge com Cloudflare Workers.
 
-First, run the development server:
+---
+
+## Stack
+
+| Camada | Tecnologia |
+|---|---|
+| Framework | Next.js 15 (App Router) + React 19 |
+| Estilo | Tailwind CSS v4 + Shadcn/ui + Radix UI |
+| Banco de dados | Cloudflare D1 (SQLite) via Drizzle ORM |
+| Auth | Better Auth (email/senha) |
+| Deploy | Cloudflare Workers via OpenNext |
+| Cache | Cloudflare KV |
+| Formulários | React Hook Form + Zod |
+| Gráficos | Recharts |
+
+---
+
+## Funcionalidades
+
+- **Hoje** — dashboard com visão geral do dia
+- **Tarefas** — criação, conclusão e organização de tarefas
+- **Hábitos** — rastreamento diário com histórico
+- **Metas** — metas com progresso e detalhamento
+- **Finanças** — controle de transações com gráficos
+- **Diário** — registro de entradas diárias
+- **Daily** — nota diária estruturada
+- **Agenda** — visualização de eventos
+- **Check-in** — check-in diário de bem-estar
+- **Perfil** — dados e preferências do usuário
+
+---
+
+## Pré-requisitos
+
+- Node.js 20+
+- Conta Cloudflare com Workers e D1 habilitados
+- Wrangler CLI (`npm i -g wrangler`) autenticado (`wrangler login`)
+
+---
+
+## Setup local
+
+### 1. Instale as dependências
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure as variáveis de ambiente
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Crie o arquivo `.dev.vars` na raiz do projeto (usado pelo `cf:dev`):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```ini
+BETTER_AUTH_SECRET=uma-string-aleatoria-com-pelo-menos-32-caracteres
+BETTER_AUTH_URL=http://localhost:8787
+```
 
-## Learn More
+> Para rodar com `npm run dev` (modo Next.js puro), crie também `.env.local` com as mesmas variáveis no formato `NOME=valor`.
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Aplique as migrations no banco local
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run db:migrate:local
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Inicie o servidor de desenvolvimento
 
-## Deploy on Vercel
+```bash
+# Desenvolvimento com Cloudflare (D1, KV, Workers — recomendado)
+npm run cf:dev
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Desenvolvimento Next.js puro (sem bindings Cloudflare)
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Acesse [http://localhost:8787](http://localhost:8787) (cf:dev) ou [http://localhost:3000](http://localhost:3000) (dev).
+
+---
+
+## Scripts disponíveis
+
+| Comando | Descrição |
+|---|---|
+| `npm run dev` | Servidor Next.js local (sem bindings CF) |
+| `npm run cf:dev` | Servidor local com Cloudflare (D1, KV) |
+| `npm run cf:preview` | Preview do build Cloudflare localmente |
+| `npm run cf:build` | Build para Cloudflare Workers |
+| `npm run cf:deploy` | Deploy para Cloudflare Workers |
+| `npm run db:migrate:local` | Aplica migrations no D1 local |
+| `npm run db:migrate:prod` | Aplica migrations no D1 de produção |
+| `npm run db:types` | Gera tipos TypeScript dos bindings Wrangler |
+| `npm run typecheck` | Verificação de tipos TypeScript |
+| `npm run lint` | ESLint |
+| `npm run test:finance` | Testes dos cálculos financeiros |
+
+---
+
+## Banco de dados
+
+O projeto usa **Cloudflare D1** (SQLite) com Drizzle ORM. As migrations ficam em `migrations/` e são aplicadas pelo Wrangler.
+
+```
+migrations/
+├── 0001_auth.sql             # Tabelas de autenticação (Better Auth)
+├── 0002_app.sql              # Tarefas, hábitos, diário, agenda
+├── 0003_daily_redesign.sql   # Redesign da daily note
+├── 0004_finance_redesign.sql # Redesign das finanças
+├── 0005_goals_redesign.sql   # Redesign das metas
+└── 0006_profiles_extended.sql # Extensão do perfil do usuário
+```
+
+Para criar uma nova migration, adicione um arquivo `000N_descricao.sql` e rode `npm run db:migrate:local`.
+
+---
+
+## Deploy
+
+### 1. Crie o banco D1 de produção (primeira vez)
+
+```bash
+wrangler d1 create creatorz
+```
+
+Atualize `database_id` em `wrangler.toml` com o ID retornado.
+
+### 2. Configure o secret de produção
+
+```bash
+wrangler secret put BETTER_AUTH_SECRET
+```
+
+### 3. Aplique as migrations em produção
+
+```bash
+npm run db:migrate:prod
+```
+
+### 4. Faça o deploy
+
+```bash
+npm run cf:deploy
+```
+
+---
+
+## Estrutura do projeto
+
+```
+creatorz/
+├── app/
+│   ├── (app)/          # Rotas protegidas (dashboard, módulos)
+│   ├── (auth)/         # Login e cadastro
+│   └── api/            # Route Handlers (REST)
+├── components/
+│   ├── layout/         # Sidebar, BottomNav, MobileMenu
+│   ├── metas/          # Componentes de metas
+│   └── ui/             # Componentes Shadcn/ui
+├── lib/
+│   ├── auth.ts         # Configuração do Better Auth (server-only)
+│   ├── db.ts           # Helpers do D1 (server-only)
+│   ├── schema.ts       # Schema Drizzle ORM
+│   ├── finance.ts      # Lógica de finanças
+│   └── utils.ts        # Utilitários gerais
+├── migrations/         # SQL migrations do D1
+├── types/              # Tipos TypeScript globais
+├── wrangler.toml       # Configuração Cloudflare (D1, KV, Workers)
+└── open-next.config.ts # Configuração OpenNext para Cloudflare
+```
+
+> **Importante:** `lib/auth.ts` e `lib/db.ts` são server-only. Nunca os importe em componentes client-side — use `lib/auth-client.ts` no cliente.
