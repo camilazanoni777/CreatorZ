@@ -1,5 +1,16 @@
 export type MoodLevel = 1 | 2 | 3 | 4 | 5;
 
+// Usuário da sessão — compartilhado entre server e client
+export type SessionUser = {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+};
+
 export interface User {
   id: string;
   email: string;

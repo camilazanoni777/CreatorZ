@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
-  Plus, LayoutGrid, List, Clock3, Trophy, Sparkles, Target,
+  Plus, LayoutGrid, List, Clock3, Trophy, Sparkles, Target, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -70,24 +70,51 @@ function nextGoal(activeGoals: Goal[]): Goal | null {
 export default function MetasPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("todas");
   const [view, setView] = useState<ViewMode>("cards");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [detailGoal, setDetailGoal] = useState<Goal | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const loadGoals = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setLoading(true);
+    setError(null);
+
+    const timer = setTimeout(() => controller.abort(), 10_000);
+
     try {
-      const res = await fetch("/api/goals");
-      if (!res.ok) return;
+      const res = await fetch("/api/goals", {
+        credentials: "include",
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
       const data = await res.json();
       setGoals(Array.isArray(data) ? data : []);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("Erro ao carregar metas:", err);
+      setError("Não foi possível carregar suas metas. Tente novamente.");
+      setGoals([]);
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { loadGoals(); }, [loadGoals]);
+  useEffect(() => {
+    loadGoals();
+    return () => { abortRef.current?.abort(); };
+  }, [loadGoals]);
 
   const activeGoals = useMemo(() => goals.filter((g) => g.status === "active"), [goals]);
   const pausedGoals = useMemo(() => goals.filter((g) => g.status === "paused"), [goals]);
@@ -214,6 +241,27 @@ export default function MetasPage() {
     setDetailGoal(null);
     setEditingGoal(goal);
     setModalOpen(true);
+  }
+
+  // ── Error state ──────────────────────────────────────────────
+  if (error && !loading) {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-destructive/8 border border-destructive/20 rounded-2xl p-8 text-center">
+          <AlertCircle className="h-8 w-8 mx-auto mb-3 text-destructive/70" />
+          <p className="text-sm font-medium text-foreground">{error}</p>
+          <Button
+            onClick={loadGoals}
+            variant="outline"
+            size="sm"
+            className="mt-4 gap-2"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Tentar novamente
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   // ── Loading skeleton ─────────────────────────────────────────

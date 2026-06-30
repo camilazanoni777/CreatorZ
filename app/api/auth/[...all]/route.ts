@@ -7,16 +7,19 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createAuth } from "@/lib/auth";
 import { toNextJsHandler } from "better-auth/next-js";
 
-export async function GET(request: Request) {
+async function makeHandlers() {
   const { env } = await getCloudflareContext({ async: true });
-  const auth = createAuth(env.DB);
-  const handlers = toNextJsHandler(auth.handler);
+  const secret = (env.BETTER_AUTH_SECRET as string | undefined) ?? process.env.BETTER_AUTH_SECRET;
+  const auth = createAuth(env.DB, secret);
+  return toNextJsHandler(auth.handler);
+}
+
+export async function GET(request: Request) {
+  const handlers = await makeHandlers();
   return handlers.GET(request);
 }
 
 export async function POST(request: Request) {
-  const { env } = await getCloudflareContext({ async: true });
-  const auth = createAuth(env.DB);
-  const handlers = toNextJsHandler(auth.handler);
+  const handlers = await makeHandlers();
   return handlers.POST(request);
 }

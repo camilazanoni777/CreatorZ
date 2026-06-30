@@ -10,7 +10,7 @@ import { drizzle } from "drizzle-orm/d1";
 import type { D1Database } from "@cloudflare/workers-types";
 import * as schema from "@/lib/schema";
 
-export function createAuth(db: D1Database) {
+export function createAuth(db: D1Database, secret?: string) {
   const drizzleDb = drizzle(db, { schema });
 
   return betterAuth({
@@ -18,6 +18,9 @@ export function createAuth(db: D1Database) {
       provider: "sqlite",
       schema,
     }),
+
+    // Secret vem do Cloudflare env (cf:dev / produção) ou de process.env (next dev)
+    secret: secret ?? process.env.BETTER_AUTH_SECRET,
 
     emailAndPassword: {
       enabled: true,

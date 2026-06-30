@@ -11,9 +11,10 @@ import { authClient } from "@/lib/auth-client";
 
 type AuthFormProps = {
   mode: "login" | "signup";
+  redirectTo?: string;
 };
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, redirectTo = "/hoje" }: AuthFormProps) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -48,7 +49,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       return;
     }
 
-    router.replace("/hoje");
+    router.replace(redirectTo);
     router.refresh();
   }
 

@@ -28,7 +28,7 @@ const updateSchema = z.object({
 // GET /api/tasks — lista as tarefas do usuário
 export async function GET(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
 
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 // POST /api/tasks — cria uma nova tarefa
 export async function POST(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const body = await parseBody(request);
     const parsed = createSchema.safeParse(body);
 
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
 // PATCH /api/tasks?id=xxx — atualiza uma tarefa
 export async function PATCH(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return badRequest("ID obrigatório");
@@ -134,7 +134,7 @@ export async function PATCH(request: Request) {
 // DELETE /api/tasks?id=xxx — remove uma tarefa
 export async function DELETE(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return badRequest("ID obrigatório");

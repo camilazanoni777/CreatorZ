@@ -76,9 +76,9 @@ function streakFor(logDates: Set<string>) {
   return streak;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const userId = session.user.id;
     const today = todayKey();
     const month = today.slice(0, 7);

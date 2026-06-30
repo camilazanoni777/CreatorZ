@@ -78,7 +78,7 @@ function payloadAmountCents(payload: z.infer<typeof createSchema>) {
 
 export async function GET(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const period = getPeriodFromParams(searchParams);
     const action = searchParams.get("action") ?? "bundle";
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const body = await parseBody(request);
 
     if ((body as { kind?: string }).kind === "category") {
@@ -169,7 +169,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const body = await parseBody(request);
@@ -231,7 +231,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return badRequest("ID obrigatorio.");
