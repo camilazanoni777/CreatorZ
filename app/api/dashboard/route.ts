@@ -44,6 +44,15 @@ type HabitLogRow = {
   date: string;
 };
 
+type GoalSummaryRow = {
+  active_count: number | null;
+  overall_pct: number | null;
+};
+
+type NextGoalRow = {
+  title: string;
+};
+
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -67,9 +76,9 @@ function streakFor(logDates: Set<string>) {
   return streak;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const userId = session.user.id;
     const today = todayKey();
     const month = today.slice(0, 7);
@@ -83,6 +92,8 @@ export async function GET() {
       habitCount,
       completedHabits,
       habitLogs,
+      goalSummary,
+      nextGoalRows,
     ] = await Promise.all([
       queryOne<TaskSummary>(
         `SELECT
@@ -130,6 +141,25 @@ export async function GET() {
         userId,
         streakStart,
       ),
+      queryOne<GoalSummaryRow>(
+        `SELECT
+          COUNT(CASE WHEN status = 'active' THEN 1 END) AS active_count,
+          COALESCE(
+            AVG(CASE WHEN status = 'active' AND target > 0
+                THEN CAST(progress AS REAL) / target * 100
+                ELSE NULL END),
+            0
+          ) AS overall_pct
+        FROM goals
+        WHERE user_id = ?`,
+        userId,
+      ),
+      query<NextGoalRow>(
+        `SELECT title FROM goals
+         WHERE user_id = ? AND status = 'active' AND deadline IS NOT NULL
+         ORDER BY deadline ASC LIMIT 1`,
+        userId,
+      ),
     ]);
 
     const logsByHabit = new Map<string, Set<string>>();
@@ -168,10 +198,10 @@ export async function GET() {
         percent: totalHabits > 0 ? Math.round((doneHabits / totalHabits) * 100) : 0,
         bestStreak,
       },
-      creator: {
-        value: 0,
-        inProduction: 0,
-        activePublis: 0,
+      goals: {
+        activeCount:   Number(goalSummary?.active_count ?? 0),
+        overallPct:    Math.round(Number(goalSummary?.overall_pct ?? 0)),
+        nextGoalTitle: nextGoalRows[0]?.title ?? null,
       },
     });
   } catch (err) {

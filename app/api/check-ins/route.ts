@@ -17,7 +17,7 @@ const schema = z.object({
 // GET /api/check-ins?month=YYYY-MM
 export async function GET(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month") ?? new Date().toISOString().slice(0, 7);
 
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 // POST /api/check-ins — upsert do check-in do dia
 export async function POST(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const body = await parseBody(request);
     const parsed = schema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message);

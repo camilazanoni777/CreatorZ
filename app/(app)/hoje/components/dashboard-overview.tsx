@@ -7,13 +7,13 @@ import {
   ArrowRight,
   Banknote,
   CheckCircle2,
-  Clapperboard,
   HeartPulse,
   Inbox,
   ListChecks,
   Loader2,
   Sparkles,
   Sprout,
+  Target,
   Waves,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,10 +43,10 @@ type DashboardData = {
     percent: number;
     bestStreak: number;
   };
-  creator: {
-    value: number;
-    inProduction: number;
-    activePublis: number;
+  goals: {
+    activeCount: number;
+    overallPct: number;
+    nextGoalTitle: string | null;
   };
 };
 
@@ -68,10 +68,10 @@ const emptyDashboardData: DashboardData = {
     percent: 0,
     bestStreak: 0,
   },
-  creator: {
-    value: 0,
-    inProduction: 0,
-    activePublis: 0,
+  goals: {
+    activeCount: 0,
+    overallPct: 0,
+    nextGoalTitle: null,
   },
 };
 
@@ -268,10 +268,16 @@ export function DashboardOverview() {
           icon={HeartPulse}
         />
         <StatCard
-          label="Creator"
-          value={money.format(data.creator.value)}
-          description={`${data.creator.inProduction} em producao - ${data.creator.activePublis} publis ativas`}
-          icon={Clapperboard}
+          label="Metas"
+          value={`${data.goals.activeCount} ativa${data.goals.activeCount !== 1 ? "s" : ""}`}
+          description={
+            data.goals.nextGoalTitle
+              ? `Próxima: ${data.goals.nextGoalTitle}`
+              : data.goals.activeCount > 0
+                ? `${data.goals.overallPct}% de progresso geral`
+                : "Crie sua primeira meta de vida."
+          }
+          icon={Target}
         />
       </section>
 

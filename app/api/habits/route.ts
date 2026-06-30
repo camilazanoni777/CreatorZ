@@ -18,7 +18,7 @@ const createSchema = z.object({
 // GET /api/habits?month=YYYY-MM — hábitos + logs do mês
 export async function GET(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month") ?? new Date().toISOString().slice(0, 7);
 
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 // POST /api/habits — cria hábito
 export async function POST(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const body = await parseBody(request);
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message);
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 // DELETE /api/habits?id=xxx — remove hábito
 export async function DELETE(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return badRequest("ID obrigatório");

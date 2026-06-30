@@ -2,18 +2,9 @@ import { headers } from "next/headers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createAuth } from "@/lib/auth";
 import { unauthorized } from "@/lib/api";
+import type { SessionUser } from "@/types";
 
-export type SessionUser = {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-  image?: string | null;
-  status?: string;
-  plan?: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
+export type { SessionUser };
 
 export type Session = {
   user: SessionUser;
@@ -25,38 +16,24 @@ export type Session = {
   };
 };
 
-export async function getSession(): Promise<Session | null> {
+export async function getSession(req?: Request): Promise<Session | null> {
   try {
     const { env } = await getCloudflareContext({ async: true });
-    const auth = createAuth(env.DB);
-    const headersList = await headers();
-    const session = await auth.api.getSession({ headers: headersList });
+    const secret = (env.BETTER_AUTH_SECRET as string | undefined) ?? process.env.BETTER_AUTH_SECRET;
+    const auth = createAuth(env.DB, secret);
+    // Route Handlers: use request.headers directly (avoids next/headers async context issues).
+    // Server Components / layouts: fall back to headers() from next/headers.
+    const hdrs = req ? req.headers : await headers();
+    const session = await auth.api.getSession({ headers: hdrs });
     if (!session?.user?.id) return null;
-
-    const user = await env.DB.prepare(
-      `SELECT status, deleted_at
-       FROM "user"
-       WHERE id = ?`,
-    ).bind(session.user.id).first<{ status?: string | null; deleted_at?: number | null }>();
-
-    if (user?.deleted_at || user?.status === "deleted" || user?.status === "suspended") {
-      return null;
-    }
-
-    return {
-      ...(session as Session),
-      user: {
-        ...(session.user as SessionUser),
-        status: user?.status ?? "active",
-      },
-    };
+    return session as Session;
   } catch {
     return null;
   }
 }
 
-export async function requireSession(): Promise<Session> {
-  const session = await getSession();
+export async function requireSession(req?: Request): Promise<Session> {
+  const session = await getSession(req);
   if (!session) throw unauthorized();
   return session;
 }

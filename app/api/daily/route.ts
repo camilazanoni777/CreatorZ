@@ -242,7 +242,7 @@ async function getWeekRows(userId: string, date: string) {
 
 export async function GET(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const date = searchParams.get("date") ?? isoDate(new Date());
     const base = createDefaultDaily(date);
@@ -267,7 +267,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const body = await parseBody(request);
     const parsed = dailySchema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message);

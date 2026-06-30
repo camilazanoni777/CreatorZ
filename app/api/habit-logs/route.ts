@@ -15,7 +15,7 @@ const toggleSchema = z.object({
 // POST /api/habit-logs — toggle check (cria se não existe, remove se existe)
 export async function POST(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const body = await parseBody(request);
     const parsed = toggleSchema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message);

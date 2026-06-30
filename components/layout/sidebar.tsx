@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -14,8 +14,11 @@ import {
   CheckSquare,
   User,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUser } from "@/lib/auth-context";
+import { authClient } from "@/lib/auth-client";
 
 const navItems = [
   { href: "/hoje", label: "Hoje", icon: LayoutDashboard },
@@ -32,6 +35,22 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const user = useUser();
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "?";
+
+  async function handleSignOut() {
+    await authClient.signOut();
+    router.replace("/login");
+  }
 
   return (
     <aside className="hidden lg:flex flex-col w-60 min-h-screen bg-sidebar border-r border-sidebar-border fixed left-0 top-0 z-40">
@@ -57,13 +76,13 @@ export function Sidebar() {
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-sidebar-accent text-sidebar-primary font-semibold"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
               )}
             >
               <Icon
                 className={cn(
                   "h-4.5 w-4.5 shrink-0",
-                  isActive ? "text-sidebar-primary" : "text-muted-foreground"
+                  isActive ? "text-sidebar-primary" : "text-muted-foreground",
                 )}
               />
               {label}
@@ -72,12 +91,36 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-4 py-4 border-t border-sidebar-border">
-        <div className="rounded-lg bg-sidebar-accent/50 p-3 text-xs text-sidebar-accent-foreground">
-          <p className="font-semibold mb-0.5">Plano Free</p>
-          <p className="text-muted-foreground">Upgrade para Pro em breve</p>
-        </div>
+      {/* Rodapé com usuário */}
+      <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
+        {user && (
+          <Link
+            href="/perfil"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-sidebar-accent/50 transition-colors"
+          >
+            <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0 overflow-hidden">
+              {user.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.image} alt={user.name} className="h-8 w-8 rounded-full object-cover" />
+              ) : (
+                <span className="text-xs font-bold text-primary">{initials}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-sidebar-foreground truncate">
+                {user.name}
+              </p>
+              <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+            </div>
+          </Link>
+        )}
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sair da conta
+        </button>
       </div>
     </aside>
   );

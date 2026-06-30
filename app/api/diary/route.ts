@@ -23,7 +23,7 @@ const updateSchema = z.object({
 // GET /api/diary?month=YYYY-MM
 export async function GET(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month") ?? new Date().toISOString().slice(0, 7);
 
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
 // POST /api/diary — nova entrada
 export async function POST(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const body = await parseBody(request);
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message);
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 // PATCH /api/diary?id=xxx
 export async function PATCH(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return badRequest("ID obrigatório");
@@ -111,7 +111,7 @@ export async function PATCH(request: Request) {
 // DELETE /api/diary?id=xxx
 export async function DELETE(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return badRequest("ID obrigatório");
