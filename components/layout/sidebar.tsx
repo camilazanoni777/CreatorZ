@@ -48,8 +48,13 @@ export function Sidebar() {
     : "?";
 
   async function handleSignOut() {
-    await authClient.signOut();
-    router.replace("/login");
+    try {
+      await authClient.signOut();
+    } catch {
+      // Se a chamada falhar (ex: servidor reiniciando), redireciona mesmo assim
+    } finally {
+      router.replace("/login");
+    }
   }
 
   return (
